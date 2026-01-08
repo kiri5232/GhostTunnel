@@ -1,0 +1,106 @@
+# GhostTunnel
+An experimental privacy-first P2P chat web app (no login, no server chat storage)
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>GHOST TUNNEL P2P Chat</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+<style>
+body{
+  background:#0b0f1a;
+  color:#00eaff;
+  font-family:monospace;
+  text-align:center;
+}
+.box{
+  border:1px solid #00eaff;
+  border-radius:12px;
+  padding:15px;
+  margin:10px auto;
+  max-width:420px;
+}
+input,textarea,button{
+  width:95%;
+  background:#000;
+  color:#00eaff;
+  border:1px solid #00eaff;
+  padding:8px;
+  margin:5px;
+}
+button{cursor:pointer}
+#chat{height:180px;overflow:auto;text-align:left}
+</style>
+</head>
+
+<body>
+
+<h2>🔐 GHOST TUNNEL Secure Chat</h2>
+
+<div class="box">
+<input id="name" placeholder="Your username">
+<button onclick="start()">Start Session</button>
+</div>
+
+<div class="box">
+<textarea id="signal" rows="5" placeholder="Signaling data"></textarea>
+<div id="qr"></div>
+<button onclick="makeOffer()">Create Offer</button>
+<button onclick="makeAnswer()">Create Answer</button>
+<button onclick="connect()">Connect</button>
+</div>
+
+<div class="box">
+<div id="chat"></div>
+<input id="msg" placeholder="Message">
+<button onclick="send()">Send</button>
+</div>
+
+<script>
+let pc, dc, uname;
+
+function log(t){chat.innerHTML+=t+"<br>";chat.scrollTop=9999;}
+
+function start(){
+ uname=name.value||"Guest";
+ pc=new RTCPeerConnection();
+ pc.onicecandidate=e=>{
+  if(!e.candidate){
+   signal.value=JSON.stringify(pc.localDescription);
+   qr.innerHTML="";
+   new QRCode(qr,signal.value);
+  }
+ };
+ pc.ondatachannel=e=>{
+  dc=e.channel;
+  dc.onmessage=m=>log("👤 "+m.data);
+ };
+}
+
+function makeOffer(){
+ dc=pc.createDataChannel("chat");
+ dc.onmessage=m=>log("👤 "+m.data);
+ pc.createOffer().then(o=>pc.setLocalDescription(o));
+}
+
+function makeAnswer(){
+ pc.setRemoteDescription(JSON.parse(signal.value))
+ .then(()=>pc.createAnswer())
+ .then(a=>pc.setLocalDescription(a));
+}
+
+function connect(){
+ pc.setRemoteDescription(JSON.parse(signal.value));
+}
+
+function send(){
+ dc.send(uname+": "+msg.value);
+ log("🧑 "+uname+": "+msg.value);
+ msg.value="";
+}
+</script>
+
+</body>
+</html>
